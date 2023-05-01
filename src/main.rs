@@ -1,6 +1,7 @@
 use text_colorizer::*;
 use std::env;
 use std::fs;
+use regex::Regex;
 
 fn print_usage() {
     eprintln!("{} - Change occurences of one string into another", "quickreplace".green());
@@ -12,7 +13,7 @@ const ARGS_LENGTH:usize = 4;
 #[derive(Debug)]
 struct Arguments {
     target: String,
-    replace: String,
+    replacement: String,
     filename: String,
     output: String
 }
@@ -26,7 +27,12 @@ fn parse_args() -> Arguments {
         std::process::exit(1);
     }
 
-    Arguments { target: args[0].clone(), replace: args[1].clone(), filename: args[2].clone(), output: args[3].clone() }
+    Arguments { target: args[0].clone(), replacement: args[1].clone(), filename: args[2].clone(), output: args[3].clone() }
+}
+
+fn replace(target: &str, replacement: &str, text: &str) -> Result<String, regex::Error> {
+    let regex = Regex::new(target)?;
+    Ok(regex.replace_all(text, replacement).to_string())
 }
 
 fn main() {
@@ -40,7 +46,15 @@ fn main() {
         }
     };
 
-    match fs::write(&args.output, &data) {
+    let replaced_data = match replace(&args.target, &args.replacement, &data) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("{} failed to replace text: {:?}", "Error".red().bold(), e);
+            std::process::exit(1);
+        }
+    };
+
+    match fs::write(&args.output, &replaced_data) {
         Ok(_) => {},
         Err(e) => {
             eprintln!("{} failed to write to file '{}' : {:?}", "Error".red().bold(), args.filename, e);
